@@ -17,21 +17,12 @@ def get_connection():
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
+    cur.execute("DELETE FROM gates")
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS gates (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        project_name TEXT NOT NULL,
-        group_name TEXT NOT NULL,
-        status TEXT NOT NULL
-    )
-    """)
+  cur.execute("SELECT COUNT(*) as total FROM gates")
+total = cur.fetchone()["total"]
 
-    cur.execute("SELECT COUNT(*) as total FROM gates")
-    total = cur.fetchone()["total"]
-
-  if total == 0:
+if True:
     cur.executemany("""
     INSERT INTO gates (id, name, project_name, group_name, status)
     VALUES (?, ?, ?, ?, ?)
@@ -51,13 +42,11 @@ def init_db():
         (13, "SCP 29", "ANASEAMLESS", "Security", "Operational"),
         (14, "SCP 30", "ANASEAMLESS", "Security", "Operational"),
         (15, "SCP 31", "ANASEAMLESS", "Security", "Operational"),
-
         (16, "KIOSK 01", "ANASEAMLESS", "Enrollment", "Operational"),
         (17, "KIOSK 03", "ANASEAMLESS", "Enrollment", "Operational"),
         (18, "KIOSK 04", "ANASEAMLESS", "Enrollment", "Operational"),
         (19, "KIOSK 05", "ANASEAMLESS", "Enrollment", "Operational"),
         (20, "KIOSK 06", "ANASEAMLESS", "Enrollment", "Operational"),
-
         (21, "SBG25-01", "ANASEAMLESS", "Boarding", "Operational"),
         (22, "SBG25-02", "ANASEAMLESS", "Boarding", "Operational"),
         (23, "SBG46-01", "ANASEAMLESS", "Boarding", "Operational"),
@@ -65,7 +54,7 @@ def init_db():
         (25, "SBG47-01", "ANASEAMLESS", "Boarding", "Operational"),
         (26, "SBG47-02", "ANASEAMLESS", "Boarding", "Operational"),
     ])
-
+    
     conn.commit()
     conn.close()
 
