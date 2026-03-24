@@ -31,7 +31,7 @@ def init_db():
     cur.execute("SELECT COUNT(*) as total FROM gates")
     total = cur.fetchone()["total"]
 
-   if total == 0:
+   if True:
     cur.executemany("""
     INSERT INTO gates (id, name, project_name, group_name, status)
     VALUES (?, ?, ?, ?, ?)
