@@ -1,15 +1,157 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<title>Airport SLA</title>
-<style>
-body { font-family: Arial; padding:20px; background:#111; color:white;}
-.card { padding:20px; margin:10px 0; background:#222; border-radius:8px;}
-.green{color:#0f0;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airport SLA Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #1b1b1b;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      color: #bbb;
+      margin-bottom: 6px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: bold;
+      margin-top: 8px;
+      margin-bottom: 14px;
+    }
+
+    .operational {
+      background: #14532d;
+      color: #86efac;
+    }
+
+    .down {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-red {
+      background: #dc2626;
+    }
+
+    .btn-red:hover {
+      background: #b91c1c;
+    }
+
+    .btn-green {
+      background: #16a34a;
+    }
+
+    .btn-green:hover {
+      background: #15803d;
+    }
+  </style>
 </head>
 <body>
-<h1>Airport SLA Dashboard</h1>
-<div class="card green">System running</div>
+  <h1>Airport SLA Dashboard</h1>
+
+  <div class="toolbar">
+    <button class="btn" onclick="alert('Próximo passo: ligar ao backend')">Adicionar gate</button>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="name">SCP 21</div>
+      <div class="meta">Projeto: ANASEAMLESS</div>
+      <div class="meta">Grupo: Security</div>
+      <div class="status operational">Operational</div>
+      <div class="actions">
+        <button class="btn btn-red">Marcar Down</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="name">SCP 22</div>
+      <div class="meta">Projeto: ANASEAMLESS</div>
+      <div class="meta">Grupo: Security</div>
+      <div class="status down">Down</div>
+      <div class="actions">
+        <button class="btn btn-green">Voltar Operational</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="name">KIOSK 01</div>
+      <div class="meta">Projeto: ANASEAMLESS</div>
+      <div class="meta">Grupo: Enrollment</div>
+      <div class="status operational">Operational</div>
+      <div class="actions">
+        <button class="btn btn-red">Marcar Down</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="name">SBG25-01</div>
+      <div class="meta">Projeto: ANASEAMLESS</div>
+      <div class="meta">Grupo: Boarding</div>
+      <div class="status operational">Operational</div>
+      <div class="actions">
+        <button class="btn btn-red">Marcar Down</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
