@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import sqlite3
+from datetime import datetime
 
 app = FastAPI()
 
@@ -13,6 +14,10 @@ def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def now_iso():
+    return datetime.utcnow().isoformat()
 
 
 def init_db():
@@ -29,7 +34,16 @@ def init_db():
     )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS group_incidents (
+        group_name TEXT PRIMARY KEY,
+        incident_start TEXT,
+        current_priority TEXT NOT NULL DEFAULT 'OK'
+    )
+    """)
+
     cur.execute("DELETE FROM gates")
+    cur.execute("DELETE FROM group_incidents")
 
     cur.executemany("""
     INSERT INTO gates (id, name, project_name, group_name, status)
@@ -63,6 +77,12 @@ def init_db():
         (26, "SBG47-02", "ANASEAMLESS", "Boarding SBG47", "Operational"),
     ])
 
+    for group_name in ["Security", "Enrollment", "Boarding SBG25", "Boarding SBG46", "Boarding SBG47"]:
+        cur.execute("""
+        INSERT INTO group_incidents (group_name, incident_start, current_priority)
+        VALUES (?, NULL, 'OK')
+        """, (group_name,))
+
     conn.commit()
     conn.close()
 
@@ -92,6 +112,58 @@ def calculate_priority(group_name, down_count):
         return "OK"
 
     return "OK"
+
+
+def get_sla_hours(priority):
+    if priority == "P1":
+        return 4
+    if priority == "P2":
+        return 8
+    if priority == "P3":
+        return 24
+    if priority == "P4":
+        return 36
+    return None
+
+
+def recalculate_group(cur, group_name):
+    cur.execute("""
+    SELECT COUNT(*) as total
+    FROM gates
+    WHERE group_name = ? AND status = 'Down'
+    """, (group_name,))
+    down_count = cur.fetchone()["total"]
+
+    priority = calculate_priority(group_name, down_count)
+
+    cur.execute("""
+    SELECT incident_start, current_priority
+    FROM group_incidents
+    WHERE group_name = ?
+    """, (group_name,))
+    incident = cur.fetchone()
+
+    incident_start = incident["incident_start"] if incident else None
+
+    if priority == "OK":
+        incident_start = None
+    else:
+        if not incident_start:
+            incident_start = now_iso()
+
+    cur.execute("""
+    UPDATE group_incidents
+    SET incident_start = ?, current_priority = ?
+    WHERE group_name = ?
+    """, (incident_start, priority, group_name))
+
+    return {
+        "group": group_name,
+        "down_count": down_count,
+        "priority": priority,
+        "incident_start": incident_start,
+        "sla_hours": get_sla_hours(priority)
+    }
 
 
 init_db()
@@ -128,27 +200,19 @@ def get_groups():
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT
-        group_name,
-        COUNT(*) as total_gates,
-        SUM(CASE WHEN status = 'Down' THEN 1 ELSE 0 END) as down_count
-    FROM gates
-    GROUP BY group_name
+    SELECT group_name
+    FROM group_incidents
     ORDER BY group_name
     """)
 
-    rows = []
+    groups = []
     for row in cur.fetchall():
-        down_count = row["down_count"]
-        rows.append({
-            "group": row["group_name"],
-            "total_gates": row["total_gates"],
-            "down_count": down_count,
-            "priority": calculate_priority(row["group_name"], down_count)
-        })
+        summary = recalculate_group(cur, row["group_name"])
+        groups.append(summary)
 
+    conn.commit()
     conn.close()
-    return rows
+    return groups
 
 
 @app.post("/api/gates/{gate_id}/status")
@@ -170,18 +234,8 @@ def update_gate_status(gate_id: int, payload: StatusUpdate):
         "UPDATE gates SET status = ? WHERE id = ?",
         (payload.status, gate_id)
     )
-    conn.commit()
 
-    group_name = existing["group_name"]
-
-    cur.execute("""
-    SELECT COUNT(*) as total
-    FROM gates
-    WHERE group_name = ? AND status = 'Down'
-    """, (group_name,))
-    down_count = cur.fetchone()["total"]
-
-    priority = calculate_priority(group_name, down_count)
+    group_summary = recalculate_group(cur, existing["group_name"])
 
     cur.execute("""
     SELECT
@@ -195,16 +249,13 @@ def update_gate_status(gate_id: int, payload: StatusUpdate):
     """, (gate_id,))
     gate = dict(cur.fetchone())
 
+    conn.commit()
     conn.close()
 
     return {
         "success": True,
         "gate": gate,
-        "group_summary": {
-            "group": group_name,
-            "down_count": down_count,
-            "priority": priority
-        }
+        "group_summary": group_summary
     }
 
 
