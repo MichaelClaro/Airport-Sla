@@ -19,31 +19,6 @@ def init_db():
     conn = get_connection()
     cur = conn.cursor()
 
-    def calculate_priority(group_name, down_count):
-    # Boarding
-    if group_name.startswith("Boarding"):
-        if down_count == 2:
-            return "P1"
-        elif down_count == 1:
-            return "P2"
-        else:
-            return "OK"
-
-    # Security (SCP)
-    if group_name == "Security":
-        if down_count >= 12:
-            return "P1"
-        elif down_count >= 8:
-            return "P2"
-        elif down_count >= 4:
-            return "P3"
-        elif down_count >= 1:
-            return "P4"
-        else:
-            return "OK"
-
-    return "OK"
-
     cur.execute("""
     CREATE TABLE IF NOT EXISTS gates (
         id INTEGER PRIMARY KEY,
@@ -54,7 +29,6 @@ def init_db():
     )
     """)
 
-    # LIMPA TUDO (para garantir que recria corretamente)
     cur.execute("DELETE FROM gates")
 
     cur.executemany("""
@@ -76,23 +50,48 @@ def init_db():
         (13, "SCP 29", "ANASEAMLESS", "Security", "Operational"),
         (14, "SCP 30", "ANASEAMLESS", "Security", "Operational"),
         (15, "SCP 31", "ANASEAMLESS", "Security", "Operational"),
-
         (16, "KIOSK 01", "ANASEAMLESS", "Enrollment", "Operational"),
         (17, "KIOSK 03", "ANASEAMLESS", "Enrollment", "Operational"),
         (18, "KIOSK 04", "ANASEAMLESS", "Enrollment", "Operational"),
         (19, "KIOSK 05", "ANASEAMLESS", "Enrollment", "Operational"),
         (20, "KIOSK 06", "ANASEAMLESS", "Enrollment", "Operational"),
-
-        (21, "SBG25-01", "ANASEAMLESS", "Boarding", "Operational"),
-        (22, "SBG25-02", "ANASEAMLESS", "Boarding", "Operational"),
-        (23, "SBG46-01", "ANASEAMLESS", "Boarding", "Operational"),
-        (24, "SBG46-02", "ANASEAMLESS", "Boarding", "Operational"),
-        (25, "SBG47-01", "ANASEAMLESS", "Boarding", "Operational"),
-        (26, "SBG47-02", "ANASEAMLESS", "Boarding", "Operational"),
+        (21, "SBG25-01", "ANASEAMLESS", "Boarding SBG25", "Operational"),
+        (22, "SBG25-02", "ANASEAMLESS", "Boarding SBG25", "Operational"),
+        (23, "SBG46-01", "ANASEAMLESS", "Boarding SBG46", "Operational"),
+        (24, "SBG46-02", "ANASEAMLESS", "Boarding SBG46", "Operational"),
+        (25, "SBG47-01", "ANASEAMLESS", "Boarding SBG47", "Operational"),
+        (26, "SBG47-02", "ANASEAMLESS", "Boarding SBG47", "Operational"),
     ])
 
     conn.commit()
     conn.close()
+
+
+def calculate_priority(group_name, down_count):
+    if group_name.startswith("Boarding"):
+        if down_count >= 2:
+            return "P1"
+        elif down_count == 1:
+            return "P2"
+        return "OK"
+
+    if group_name == "Security":
+        if down_count >= 12:
+            return "P1"
+        elif down_count >= 8:
+            return "P2"
+        elif down_count >= 4:
+            return "P3"
+        elif down_count >= 1:
+            return "P4"
+        return "OK"
+
+    if group_name == "Enrollment":
+        if down_count >= 1:
+            return "P4"
+        return "OK"
+
+    return "OK"
 
 
 init_db()
@@ -123,15 +122,44 @@ def get_gates():
     return rows
 
 
+@app.get("/api/groups")
+def get_groups():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT
+        group_name,
+        COUNT(*) as total_gates,
+        SUM(CASE WHEN status = 'Down' THEN 1 ELSE 0 END) as down_count
+    FROM gates
+    GROUP BY group_name
+    ORDER BY group_name
+    """)
+
+    rows = []
+    for row in cur.fetchall():
+        down_count = row["down_count"]
+        rows.append({
+            "group": row["group_name"],
+            "total_gates": row["total_gates"],
+            "down_count": down_count,
+            "priority": calculate_priority(row["group_name"], down_count)
+        })
+
+    conn.close()
+    return rows
+
+
 @app.post("/api/gates/{gate_id}/status")
 def update_gate_status(gate_id: int, payload: StatusUpdate):
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT id FROM gates WHERE id = ?", (gate_id,))
-    row = cur.fetchone()
+    cur.execute("SELECT id, group_name FROM gates WHERE id = ?", (gate_id,))
+    existing = cur.fetchone()
 
-    if not row:
+    if not existing:
         conn.close()
         return JSONResponse(
             status_code=404,
@@ -144,6 +172,17 @@ def update_gate_status(gate_id: int, payload: StatusUpdate):
     )
     conn.commit()
 
+    group_name = existing["group_name"]
+
+    cur.execute("""
+    SELECT COUNT(*) as total
+    FROM gates
+    WHERE group_name = ? AND status = 'Down'
+    """, (group_name,))
+    down_count = cur.fetchone()["total"]
+
+    priority = calculate_priority(group_name, down_count)
+
     cur.execute("""
     SELECT
         id,
@@ -154,11 +193,19 @@ def update_gate_status(gate_id: int, payload: StatusUpdate):
     FROM gates
     WHERE id = ?
     """, (gate_id,))
-
     gate = dict(cur.fetchone())
+
     conn.close()
 
-    return {"success": True, "gate": gate}
+    return {
+        "success": True,
+        "gate": gate,
+        "group_summary": {
+            "group": group_name,
+            "down_count": down_count,
+            "priority": priority
+        }
+    }
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
