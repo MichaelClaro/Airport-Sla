@@ -10,101 +10,103 @@
       background: #111;
       color: #fff;
       margin: 0;
-      padding: 24px;
+      padding: 20px;
     }
+
     h1 {
-      margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
+
+    h2 {
+      margin-top: 30px;
+      margin-bottom: 10px;
     }
-    .btn {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn:hover {
-      background: #1d4ed8;
-    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
+      gap: 12px;
     }
+
     .card {
       background: #1b1b1b;
       border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 10px;
+      padding: 14px;
     }
+
     .name {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
-      margin-bottom: 10px;
     }
+
     .meta {
       color: #bbb;
-      margin-bottom: 6px;
+      font-size: 13px;
     }
+
     .status {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-weight: bold;
       margin-top: 8px;
-      margin-bottom: 14px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      font-weight: bold;
+      font-size: 12px;
     }
-    .operational {
-      background: #14532d;
-      color: #86efac;
+
+    .operational { background: #14532d; color: #86efac; }
+    .down { background: #7f1d1d; color: #fca5a5; }
+
+    .priority {
+      margin-top: 8px;
+      font-weight: bold;
+      font-size: 13px;
     }
-    .down {
-      background: #7f1d1d;
-      color: #fca5a5;
+
+    .p1 { color: #ff4d4d; }
+    .p2 { color: #ff944d; }
+    .p3 { color: #ffd24d; }
+    .p4 { color: #66ccff; }
+    .ok { color: #86efac; }
+
+    .btn {
+      margin-top: 10px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
     }
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .btn-red {
-      background: #dc2626;
-    }
-    .btn-red:hover {
-      background: #b91c1c;
-    }
-    .btn-green {
-      background: #16a34a;
-    }
-    .btn-green:hover {
-      background: #15803d;
-    }
+
+    .btn-red { background: #dc2626; color: white; }
+    .btn-green { background: #16a34a; color: white; }
+
   </style>
 </head>
 <body>
+
   <h1>Airport SLA Dashboard</h1>
 
-  <div class="toolbar">
-    <button class="btn" onclick="alert('Próximo passo: adicionar gate real')">Adicionar gate</button>
-  </div>
+  <h2>Grupos (SLA)</h2>
+  <div class="grid" id="groups"></div>
 
-  <div class="grid"></div>
+  <h2>Equipamentos</h2>
+  <div class="grid" id="gates"></div>
 
   <script>
     let gates = [];
+    let groups = [];
 
-    async function loadGates() {
-      const res = await fetch("/api/gates");
-      gates = await res.json();
-      render();
+    async function loadData() {
+      const gatesRes = await fetch("/api/gates");
+      const groupsRes = await fetch("/api/groups");
+
+      gates = await gatesRes.json();
+      groups = await groupsRes.json();
+
+      renderGroups();
+      renderGates();
     }
 
     async function toggleStatus(id) {
@@ -119,11 +121,36 @@
         body: JSON.stringify({ status: newStatus })
       });
 
-      await loadGates();
+      await loadData();
     }
 
-    function render() {
-      const container = document.querySelector(".grid");
+    function getPriorityClass(p) {
+      if (p === "P1") return "p1";
+      if (p === "P2") return "p2";
+      if (p === "P3") return "p3";
+      if (p === "P4") return "p4";
+      return "ok";
+    }
+
+    function renderGroups() {
+      const container = document.getElementById("groups");
+      container.innerHTML = "";
+
+      groups.forEach(g => {
+        container.innerHTML += `
+          <div class="card">
+            <div class="name">${g.group}</div>
+            <div class="meta">${g.down_count} down / ${g.total_gates}</div>
+            <div class="priority ${getPriorityClass(g.priority)}">
+              ${g.priority}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderGates() {
+      const container = document.getElementById("gates");
       container.innerHTML = "";
 
       gates.forEach(g => {
@@ -132,23 +159,21 @@
         container.innerHTML += `
           <div class="card">
             <div class="name">${g.name}</div>
-            <div class="meta">Projeto: ${g.project}</div>
-            <div class="meta">Grupo: ${g.group}</div>
+            <div class="meta">${g.group}</div>
             <div class="status ${isDown ? "down" : "operational"}">
               ${g.status}
             </div>
-            <div class="actions">
-              <button class="btn ${isDown ? "btn-green" : "btn-red"}"
-                onclick="toggleStatus(${g.id})">
-                ${isDown ? "Voltar Operational" : "Marcar Down"}
-              </button>
-            </div>
+            <button class="btn ${isDown ? "btn-green" : "btn-red"}"
+              onclick="toggleStatus(${g.id})">
+              ${isDown ? "Voltar" : "Down"}
+            </button>
           </div>
         `;
       });
     }
 
-    loadGates();
+    loadData();
   </script>
+
 </body>
 </html>
