@@ -153,5 +153,47 @@
       </div>
     </div>
   </div>
-</body>
-</html>
+<script>
+  const gates = [
+    { id: 1, name: "SCP 21", status: "Operational" },
+    { id: 2, name: "SCP 22", status: "Down" },
+    { id: 3, name: "KIOSK 01", status: "Operational" },
+    { id: 4, name: "SBG25-01", status: "Operational" }
+  ];
+
+  function toggleStatus(id) {
+    const gate = gates.find(g => g.id === id);
+    if (!gate) return;
+
+    gate.status = gate.status === "Operational" ? "Down" : "Operational";
+    render();
+  }
+
+  function render() {
+    const container = document.querySelector(".grid");
+    container.innerHTML = "";
+
+    gates.forEach(g => {
+      const isDown = g.status === "Down";
+
+      container.innerHTML += `
+        <div class="card">
+          <div class="name">${g.name}</div>
+          <div class="meta">Projeto: ANASEAMLESS</div>
+          <div class="meta">Grupo: -</div>
+          <div class="status ${isDown ? "down" : "operational"}">
+            ${g.status}
+          </div>
+          <div class="actions">
+            <button class="btn ${isDown ? "btn-green" : "btn-red"}"
+              onclick="toggleStatus(${g.id})">
+              ${isDown ? "Voltar Operational" : "Marcar Down"}
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  render();
+</script>
