@@ -19,6 +19,31 @@ def init_db():
     conn = get_connection()
     cur = conn.cursor()
 
+    def calculate_priority(group_name, down_count):
+    # Boarding
+    if group_name.startswith("Boarding"):
+        if down_count == 2:
+            return "P1"
+        elif down_count == 1:
+            return "P2"
+        else:
+            return "OK"
+
+    # Security (SCP)
+    if group_name == "Security":
+        if down_count >= 12:
+            return "P1"
+        elif down_count >= 8:
+            return "P2"
+        elif down_count >= 4:
+            return "P3"
+        elif down_count >= 1:
+            return "P4"
+        else:
+            return "OK"
+
+    return "OK"
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS gates (
         id INTEGER PRIMARY KEY,
