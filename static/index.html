@@ -1,179 +1,103 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Airport SLA Dashboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
-    }
+<meta charset="UTF-8">
+<title>Airport SLA</title>
 
-    h1 {
-      margin-bottom: 16px;
-    }
+<style>
+body { font-family: Arial; background:#111; color:#fff; padding:20px; }
+.grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap:10px; }
 
-    h2 {
-      margin-top: 30px;
-      margin-bottom: 10px;
-    }
+.card { background:#1b1b1b; padding:12px; border-radius:8px; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-    }
+.ok { color:#86efac; }
+.p1 { color:#ff4d4d; }
+.p2 { color:#ff944d; }
+.p3 { color:#ffd24d; }
+.p4 { color:#66ccff; }
 
-    .card {
-      background: #1b1b1b;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 14px;
-    }
-
-    .name {
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .meta {
-      color: #bbb;
-      font-size: 13px;
-    }
-
-    .status {
-      margin-top: 8px;
-      padding: 5px 8px;
-      border-radius: 6px;
-      display: inline-block;
-      font-weight: bold;
-      font-size: 12px;
-    }
-
-    .operational { background: #14532d; color: #86efac; }
-    .down { background: #7f1d1d; color: #fca5a5; }
-
-    .priority {
-      margin-top: 8px;
-      font-weight: bold;
-      font-size: 13px;
-    }
-
-    .p1 { color: #ff4d4d; }
-    .p2 { color: #ff944d; }
-    .p3 { color: #ffd24d; }
-    .p4 { color: #66ccff; }
-    .ok { color: #86efac; }
-
-    .btn {
-      margin-top: 10px;
-      padding: 6px 10px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .btn-red { background: #dc2626; color: white; }
-    .btn-green { background: #16a34a; color: white; }
-
-  </style>
+.alert { color:#ff4d4d; font-weight:bold; }
+</style>
 </head>
+
 <body>
 
-  <h1>Airport SLA Dashboard</h1>
+<h2>Grupos (SLA)</h2>
+<div id="groups" class="grid"></div>
 
-  <h2>Grupos (SLA)</h2>
-  <div class="grid" id="groups"></div>
+<script>
+let groups = [];
 
-  <h2>Equipamentos</h2>
-  <div class="grid" id="gates"></div>
+function formatTime(ms){
+  let s = Math.floor(ms/1000);
+  let h = Math.floor(s/3600);
+  let m = Math.floor((s%3600)/60);
+  let sec = s%60;
+  return `${h}h ${m}m ${sec}s`;
+}
 
-  <script>
-    let gates = [];
-    let groups = [];
+function getClass(p){
+  return p==="P1"?"p1":
+         p==="P2"?"p2":
+         p==="P3"?"p3":
+         p==="P4"?"p4":"ok";
+}
 
-    async function loadData() {
-      const gatesRes = await fetch("/api/gates");
-      const groupsRes = await fetch("/api/groups");
+function render(){
+  let container = document.getElementById("groups");
+  container.innerHTML="";
 
-      gates = await gatesRes.json();
-      groups = await groupsRes.json();
+  groups.forEach(g=>{
+    let elapsed = "";
+    let remaining = "";
+    let alert = "";
 
-      renderGroups();
-      renderGates();
+    if(g.incident_start){
+      let start = new Date(g.incident_start);
+      let now = new Date();
+
+      let diff = now - start;
+      let total = g.sla_hours * 3600000;
+
+      elapsed = formatTime(diff);
+
+      let left = total - diff;
+      if(left < 0){
+        remaining = "ESTOURADO";
+        alert = "alert";
+      } else {
+        remaining = formatTime(left);
+
+        if(left < (15*3600000)){
+          alert = "alert";
+        }
+      }
     }
 
-    async function toggleStatus(id) {
-      const gate = gates.find(g => g.id === id);
-      if (!gate) return;
+    container.innerHTML += `
+      <div class="card">
+        <div><b>${g.group}</b></div>
+        <div>Down: ${g.down_count}</div>
+        <div class="${getClass(g.priority)}">${g.priority}</div>
 
-      const newStatus = gate.status === "Operational" ? "Down" : "Operational";
+        ${g.incident_start ? `
+          <div>Elapsed: ${elapsed}</div>
+          <div class="${alert}">Remaining: ${remaining}</div>
+        ` : `<div class="ok">Sem incidente</div>`}
+      </div>
+    `;
+  });
+}
 
-      await fetch(`/api/gates/${id}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      });
+async function load(){
+  let res = await fetch("/api/groups");
+  groups = await res.json();
+  render();
+}
 
-      await loadData();
-    }
-
-    function getPriorityClass(p) {
-      if (p === "P1") return "p1";
-      if (p === "P2") return "p2";
-      if (p === "P3") return "p3";
-      if (p === "P4") return "p4";
-      return "ok";
-    }
-
-    function renderGroups() {
-      const container = document.getElementById("groups");
-      container.innerHTML = "";
-
-      groups.forEach(g => {
-        container.innerHTML += `
-          <div class="card">
-            <div class="name">${g.group}</div>
-            <div class="meta">${g.down_count} down / ${g.total_gates}</div>
-            <div class="priority ${getPriorityClass(g.priority)}">
-              ${g.priority}
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function renderGates() {
-      const container = document.getElementById("gates");
-      container.innerHTML = "";
-
-      gates.forEach(g => {
-        const isDown = g.status === "Down";
-
-        container.innerHTML += `
-          <div class="card">
-            <div class="name">${g.name}</div>
-            <div class="meta">${g.group}</div>
-            <div class="status ${isDown ? "down" : "operational"}">
-              ${g.status}
-            </div>
-            <button class="btn ${isDown ? "btn-green" : "btn-red"}"
-              onclick="toggleStatus(${g.id})">
-              ${isDown ? "Voltar" : "Down"}
-            </button>
-          </div>
-        `;
-      });
-    }
-
-    loadData();
-  </script>
+setInterval(load, 1000);
+load();
+</script>
 
 </body>
 </html>
