@@ -12,19 +12,16 @@
       margin: 0;
       padding: 24px;
     }
-
     h1 {
       margin-top: 0;
       margin-bottom: 20px;
     }
-
     .toolbar {
       display: flex;
       gap: 12px;
       margin-bottom: 24px;
       flex-wrap: wrap;
     }
-
     .btn {
       background: #2563eb;
       color: white;
@@ -34,35 +31,29 @@
       cursor: pointer;
       font-weight: bold;
     }
-
     .btn:hover {
       background: #1d4ed8;
     }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
     }
-
     .card {
       background: #1b1b1b;
       border: 1px solid #2a2a2a;
       border-radius: 12px;
       padding: 16px;
     }
-
     .name {
       font-size: 20px;
       font-weight: bold;
       margin-bottom: 10px;
     }
-
     .meta {
       color: #bbb;
       margin-bottom: 6px;
     }
-
     .status {
       display: inline-block;
       padding: 6px 10px;
@@ -71,35 +62,28 @@
       margin-top: 8px;
       margin-bottom: 14px;
     }
-
     .operational {
       background: #14532d;
       color: #86efac;
     }
-
     .down {
       background: #7f1d1d;
       color: #fca5a5;
     }
-
     .actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
     }
-
     .btn-red {
       background: #dc2626;
     }
-
     .btn-red:hover {
       background: #b91c1c;
     }
-
     .btn-green {
       background: #16a34a;
     }
-
     .btn-green:hover {
       background: #15803d;
     }
@@ -109,91 +93,62 @@
   <h1>Airport SLA Dashboard</h1>
 
   <div class="toolbar">
-    <button class="btn" onclick="alert('Próximo passo: ligar ao backend')">Adicionar gate</button>
+    <button class="btn" onclick="alert('Próximo passo: adicionar gate real')">Adicionar gate</button>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="name">SCP 21</div>
-      <div class="meta">Projeto: ANASEAMLESS</div>
-      <div class="meta">Grupo: Security</div>
-      <div class="status operational">Operational</div>
-      <div class="actions">
-        <button class="btn btn-red">Marcar Down</button>
-      </div>
-    </div>
+  <div class="grid"></div>
 
-    <div class="card">
-      <div class="name">SCP 22</div>
-      <div class="meta">Projeto: ANASEAMLESS</div>
-      <div class="meta">Grupo: Security</div>
-      <div class="status down">Down</div>
-      <div class="actions">
-        <button class="btn btn-green">Voltar Operational</button>
-      </div>
-    </div>
+  <script>
+    let gates = [];
 
-    <div class="card">
-      <div class="name">KIOSK 01</div>
-      <div class="meta">Projeto: ANASEAMLESS</div>
-      <div class="meta">Grupo: Enrollment</div>
-      <div class="status operational">Operational</div>
-      <div class="actions">
-        <button class="btn btn-red">Marcar Down</button>
-      </div>
-    </div>
+    async function loadGates() {
+      const res = await fetch("/api/gates");
+      gates = await res.json();
+      render();
+    }
 
-    <div class="card">
-      <div class="name">SBG25-01</div>
-      <div class="meta">Projeto: ANASEAMLESS</div>
-      <div class="meta">Grupo: Boarding</div>
-      <div class="status operational">Operational</div>
-      <div class="actions">
-        <button class="btn btn-red">Marcar Down</button>
-      </div>
-    </div>
-  </div>
-<script>
-  const gates = [
-    { id: 1, name: "SCP 21", status: "Operational" },
-    { id: 2, name: "SCP 22", status: "Down" },
-    { id: 3, name: "KIOSK 01", status: "Operational" },
-    { id: 4, name: "SBG25-01", status: "Operational" }
-  ];
+    async function toggleStatus(id) {
+      const gate = gates.find(g => g.id === id);
+      if (!gate) return;
 
-  function toggleStatus(id) {
-    const gate = gates.find(g => g.id === id);
-    if (!gate) return;
+      const newStatus = gate.status === "Operational" ? "Down" : "Operational";
 
-    gate.status = gate.status === "Operational" ? "Down" : "Operational";
-    render();
-  }
+      await fetch(`/api/gates/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
 
-  function render() {
-    const container = document.querySelector(".grid");
-    container.innerHTML = "";
+      await loadGates();
+    }
 
-    gates.forEach(g => {
-      const isDown = g.status === "Down";
+    function render() {
+      const container = document.querySelector(".grid");
+      container.innerHTML = "";
 
-      container.innerHTML += `
-        <div class="card">
-          <div class="name">${g.name}</div>
-          <div class="meta">Projeto: ANASEAMLESS</div>
-          <div class="meta">Grupo: -</div>
-          <div class="status ${isDown ? "down" : "operational"}">
-            ${g.status}
+      gates.forEach(g => {
+        const isDown = g.status === "Down";
+
+        container.innerHTML += `
+          <div class="card">
+            <div class="name">${g.name}</div>
+            <div class="meta">Projeto: ${g.project}</div>
+            <div class="meta">Grupo: ${g.group}</div>
+            <div class="status ${isDown ? "down" : "operational"}">
+              ${g.status}
+            </div>
+            <div class="actions">
+              <button class="btn ${isDown ? "btn-green" : "btn-red"}"
+                onclick="toggleStatus(${g.id})">
+                ${isDown ? "Voltar Operational" : "Marcar Down"}
+              </button>
+            </div>
           </div>
-          <div class="actions">
-            <button class="btn ${isDown ? "btn-green" : "btn-red"}"
-              onclick="toggleStatus(${g.id})">
-              ${isDown ? "Voltar Operational" : "Marcar Down"}
-            </button>
-          </div>
-        </div>
-      `;
-    });
-  }
+        `;
+      });
+    }
 
-  render();
-</script>
+    loadGates();
+  </script>
+</body>
+</html>
