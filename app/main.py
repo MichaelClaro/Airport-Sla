@@ -31,16 +31,40 @@ def init_db():
     cur.execute("SELECT COUNT(*) as total FROM gates")
     total = cur.fetchone()["total"]
 
-    if total == 0:
-        cur.executemany("""
-        INSERT INTO gates (id, name, project_name, group_name, status)
-        VALUES (?, ?, ?, ?, ?)
-        """, [
-            (1, "SCP 21", "ANASEAMLESS", "Security", "Operational"),
-            (2, "SCP 22", "ANASEAMLESS", "Security", "Down"),
-            (3, "KIOSK 01", "ANASEAMLESS", "Enrollment", "Operational"),
-            (4, "SBG25-01", "ANASEAMLESS", "Boarding", "Operational"),
-        ])
+   if total == 0:
+    cur.executemany("""
+    INSERT INTO gates (id, name, project_name, group_name, status)
+    VALUES (?, ?, ?, ?, ?)
+    """, [
+        (1, "SCP 11", "ANASEAMLESS", "Security", "Operational"),
+        (2, "SCP 12", "ANASEAMLESS", "Security", "Operational"),
+        (3, "SCP 14", "ANASEAMLESS", "Security", "Operational"),
+        (4, "SCP 15", "ANASEAMLESS", "Security", "Operational"),
+        (5, "SCP 16", "ANASEAMLESS", "Security", "Operational"),
+        (6, "SCP 17", "ANASEAMLESS", "Security", "Operational"),
+        (7, "SCP 21", "ANASEAMLESS", "Security", "Operational"),
+        (8, "SCP 22", "ANASEAMLESS", "Security", "Operational"),
+        (9, "SCP 23", "ANASEAMLESS", "Security", "Operational"),
+        (10, "SCP 24", "ANASEAMLESS", "Security", "Operational"),
+        (11, "SCP 25", "ANASEAMLESS", "Security", "Operational"),
+        (12, "SCP 28", "ANASEAMLESS", "Security", "Operational"),
+        (13, "SCP 29", "ANASEAMLESS", "Security", "Operational"),
+        (14, "SCP 30", "ANASEAMLESS", "Security", "Operational"),
+        (15, "SCP 31", "ANASEAMLESS", "Security", "Operational"),
+
+        (16, "KIOSK 01", "ANASEAMLESS", "Enrollment", "Operational"),
+        (17, "KIOSK 03", "ANASEAMLESS", "Enrollment", "Operational"),
+        (18, "KIOSK 04", "ANASEAMLESS", "Enrollment", "Operational"),
+        (19, "KIOSK 05", "ANASEAMLESS", "Enrollment", "Operational"),
+        (20, "KIOSK 06", "ANASEAMLESS", "Enrollment", "Operational"),
+
+        (21, "SBG25-01", "ANASEAMLESS", "Boarding", "Operational"),
+        (22, "SBG25-02", "ANASEAMLESS", "Boarding", "Operational"),
+        (23, "SBG46-01", "ANASEAMLESS", "Boarding", "Operational"),
+        (24, "SBG46-02", "ANASEAMLESS", "Boarding", "Operational"),
+        (25, "SBG47-01", "ANASEAMLESS", "Boarding", "Operational"),
+        (26, "SBG47-02", "ANASEAMLESS", "Boarding", "Operational"),
+    ])
 
     conn.commit()
     conn.close()
