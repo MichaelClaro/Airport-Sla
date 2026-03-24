@@ -17,12 +17,19 @@ def get_connection():
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS gates (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        project_name TEXT NOT NULL,
+        group_name TEXT NOT NULL,
+        status TEXT NOT NULL
+    )
+    """)
+
     cur.execute("DELETE FROM gates")
 
-  cur.execute("SELECT COUNT(*) as total FROM gates")
-total = cur.fetchone()["total"]
-
-if True:
     cur.executemany("""
     INSERT INTO gates (id, name, project_name, group_name, status)
     VALUES (?, ?, ?, ?, ?)
@@ -54,12 +61,9 @@ if True:
         (25, "SBG47-01", "ANASEAMLESS", "Boarding", "Operational"),
         (26, "SBG47-02", "ANASEAMLESS", "Boarding", "Operational"),
     ])
-    
+
     conn.commit()
     conn.close()
-
-
-init_db()
 
 
 class StatusUpdate(BaseModel):
