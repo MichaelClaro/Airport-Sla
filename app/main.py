@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import sqlite3
 
 app = FastAPI()
+
 DB_PATH = "airport_v2.db"
 
 
@@ -28,6 +29,7 @@ def init_db():
     )
     """)
 
+    # LIMPA TUDO (para garantir que recria corretamente)
     cur.execute("DELETE FROM gates")
 
     cur.executemany("""
@@ -49,11 +51,13 @@ def init_db():
         (13, "SCP 29", "ANASEAMLESS", "Security", "Operational"),
         (14, "SCP 30", "ANASEAMLESS", "Security", "Operational"),
         (15, "SCP 31", "ANASEAMLESS", "Security", "Operational"),
+
         (16, "KIOSK 01", "ANASEAMLESS", "Enrollment", "Operational"),
         (17, "KIOSK 03", "ANASEAMLESS", "Enrollment", "Operational"),
         (18, "KIOSK 04", "ANASEAMLESS", "Enrollment", "Operational"),
         (19, "KIOSK 05", "ANASEAMLESS", "Enrollment", "Operational"),
         (20, "KIOSK 06", "ANASEAMLESS", "Enrollment", "Operational"),
+
         (21, "SBG25-01", "ANASEAMLESS", "Boarding", "Operational"),
         (22, "SBG25-02", "ANASEAMLESS", "Boarding", "Operational"),
         (23, "SBG46-01", "ANASEAMLESS", "Boarding", "Operational"),
@@ -66,6 +70,9 @@ def init_db():
     conn.close()
 
 
+init_db()
+
+
 class StatusUpdate(BaseModel):
     status: str
 
@@ -74,16 +81,18 @@ class StatusUpdate(BaseModel):
 def get_gates():
     conn = get_connection()
     cur = conn.cursor()
+
     cur.execute("""
-        SELECT
-            id,
-            name,
-            project_name as project,
-            group_name as "group",
-            status
-        FROM gates
-        ORDER BY id
+    SELECT
+        id,
+        name,
+        project_name as project,
+        group_name as "group",
+        status
+    FROM gates
+    ORDER BY id
     """)
+
     rows = [dict(row) for row in cur.fetchall()]
     conn.close()
     return rows
@@ -111,18 +120,19 @@ def update_gate_status(gate_id: int, payload: StatusUpdate):
     conn.commit()
 
     cur.execute("""
-        SELECT
-            id,
-            name,
-            project_name as project,
-            group_name as "group",
-            status
-        FROM gates
-        WHERE id = ?
+    SELECT
+        id,
+        name,
+        project_name as project,
+        group_name as "group",
+        status
+    FROM gates
+    WHERE id = ?
     """, (gate_id,))
-    gate = dict(cur.fetchone())
 
+    gate = dict(cur.fetchone())
     conn.close()
+
     return {"success": True, "gate": gate}
 
 
