@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import sqlite3
 
 app = FastAPI()
-DB_PATH = "airport.db"
+DB_PATH = "airport_v2.db"
 
 
 def get_connection():
